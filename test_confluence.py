@@ -66,3 +66,25 @@ run_test(
         {"type": "BEARISH"},
     ],
 )
+
+
+# BULLISH MSS WITH LATER OPPOSITE ARTIFACTS
+# Expected: bullish directional evidence remains relevant.
+run_test(
+    "BULLISH MSS WITH LATER OPPOSITE ARTIFACTS",
+    {"bias": "BEARISH"},
+    [{"type": "SSL_SWEEP"}],
+    [{"type": "BULLISH_MSS"}],
+    [
+        {"type": "BULLISH_FVG", "index": 10},
+    ],
+    [
+        {"type": "BULLISH_OB", "index": 8},
+        {"type": "BEARISH_OB", "index": 11},
+    ],
+    {"zone": "DISCOUNT"},
+    [
+        {"type": "BULLISH", "index": 9},
+        {"type": "BEARISH", "index": 13},
+    ],
+)
