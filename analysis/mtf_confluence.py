@@ -8,6 +8,8 @@ def calculate_mtf_confluence(results):
     score = 0
     reasons = []
 
+    max_weighted_score = 0
+
     for timeframe, analysis in results.items():
         confluence = analysis["confluence"]
         raw_score = confluence["score"]
@@ -16,6 +18,7 @@ def calculate_mtf_confluence(results):
         weighted_score = raw_score * weight
 
         score += weighted_score
+        max_weighted_score += 10 * weight
 
         signal = confluence["signal"]
 
@@ -31,7 +34,12 @@ def calculate_mtf_confluence(results):
     else:
         signal = "WAIT"
 
-    confidence = min(abs(score) * 10, 100)
+    if max_weighted_score > 0:
+        confidence = round(
+            abs(score) / max_weighted_score * 100
+        )
+    else:
+        confidence = 0
 
     return {
         "signal": signal,
