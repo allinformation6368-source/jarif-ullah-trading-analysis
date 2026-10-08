@@ -2,6 +2,8 @@ from analysis.paper_trading import (
     create_paper_order,
     update_paper_order,
     calculate_paper_balance,
+    process_paper_position,
+    calculate_open_positions,
 )
 
 
@@ -131,3 +133,67 @@ def test_paper_balance():
     assert result["total_pnl"] == 5
     assert result["ending_balance"] == 10005
     assert result["closed_trades"] == 2
+
+
+def test_process_paper_position_closes_on_later_candle():
+    order = create_paper_order(ready_plan("BUY"))
+
+    result = process_paper_position(
+        order,
+        [
+            {"high": 104, "low": 98},
+            {"high": 111, "low": 101},
+        ],
+    )
+
+    assert result["status"] == "CLOSED"
+    assert result["result"] == "WIN"
+    assert result["exit_price"] == 110
+    assert result["pnl"] == 10
+
+
+def test_process_paper_position_stops_on_stop_loss():
+    order = create_paper_order(ready_plan("SELL"))
+
+    result = process_paper_position(
+        order,
+        [
+            {"high": 103, "low": 97},
+            {"high": 106, "low": 99},
+        ],
+    )
+
+    assert result["status"] == "CLOSED"
+    assert result["result"] == "LOSS"
+    assert result["exit_price"] == 105
+    assert result["pnl"] == -5
+
+
+def test_process_paper_position_remains_open():
+    order = create_paper_order(ready_plan("BUY"))
+
+    result = process_paper_position(
+        order,
+        [
+            {"high": 103, "low": 98},
+            {"high": 107, "low": 99},
+        ],
+    )
+
+    assert result["status"] == "OPEN"
+    assert result["result"] is None
+    assert result["pnl"] == 0
+
+
+def test_calculate_open_positions():
+    orders = [
+        {"status": "OPEN", "signal": "BUY"},
+        {"status": "CLOSED", "signal": "SELL"},
+        {"status": "OPEN", "signal": "SELL"},
+    ]
+
+    result = calculate_open_positions(orders)
+
+    assert result["status"] == "VALID"
+    assert result["open_positions"] == 2
+    assert len(result["orders"]) == 2

@@ -157,3 +157,58 @@ def calculate_paper_balance(
         "ending_balance": starting_balance + total_pnl,
         "closed_trades": len(closed_orders),
     }
+
+
+def process_paper_position(order, candles):
+    if not isinstance(order, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid order",
+        }
+
+    if order.get("status") != "OPEN":
+        return {
+            "status": "REJECTED",
+            "reason": "Order is not open",
+        }
+
+    if not isinstance(candles, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid candles",
+        }
+
+    for candle in candles:
+        result = update_paper_order(
+            order=order,
+            candle=candle,
+        )
+
+        if result.get("status") == "CLOSED":
+            return result
+
+        if result.get("status") == "REJECTED":
+            return result
+
+    return order
+
+
+def calculate_open_positions(orders):
+    if not isinstance(orders, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid orders",
+        }
+
+    open_orders = [
+        order
+        for order in orders
+        if isinstance(order, dict)
+        and order.get("status") == "OPEN"
+    ]
+
+    return {
+        "status": "VALID",
+        "open_positions": len(open_orders),
+        "orders": open_orders,
+    }
