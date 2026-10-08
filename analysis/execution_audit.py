@@ -160,3 +160,38 @@ def read_execution_audits(
                     records.append(record)
 
     return records
+
+def query_execution_audits(
+    audit_file=DEFAULT_AUDIT_FILE,
+    execution_status=None,
+    signal=None,
+    mode=None,
+    limit=None,
+):
+    records = read_execution_audits(audit_file)
+
+    if execution_status is not None:
+        records = [
+            record for record in records
+            if record.get("execution_status") == execution_status
+        ]
+
+    if signal is not None:
+        records = [
+            record for record in records
+            if record.get("signal") == signal
+        ]
+
+    if mode is not None:
+        records = [
+            record for record in records
+            if record.get("mode") == mode
+        ]
+
+    if limit is not None:
+        if not isinstance(limit, int) or limit <= 0:
+            return []
+
+        records = records[-limit:]
+
+    return records

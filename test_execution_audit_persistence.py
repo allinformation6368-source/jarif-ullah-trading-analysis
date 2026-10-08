@@ -135,3 +135,117 @@ def test_invalid_rotation_size_is_rejected(tmp_path):
     )
 
     assert result["status"] == "REJECTED"
+
+
+def test_query_execution_audits_by_status(tmp_path):
+    audit_file = tmp_path / "execution_audit.jsonl"
+
+    for status in ("PAPER_ACCEPTED", "REJECTED", "PAPER_ACCEPTED"):
+        audit = create_execution_audit(
+            {
+                "status": status,
+                "mode": "PAPER",
+            },
+            {
+                "signal": "BUY",
+                "entry": 100,
+                "stop_loss": 95,
+                "take_profit": 110,
+            },
+        )
+        persist_execution_audit(audit, audit_file)
+
+    from analysis.execution_audit import query_execution_audits
+
+    records = query_execution_audits(
+        audit_file,
+        execution_status="PAPER_ACCEPTED",
+    )
+
+    assert len(records) == 2
+    assert all(
+        record["execution_status"] == "PAPER_ACCEPTED"
+        for record in records
+    )
+
+
+def test_query_execution_audits_by_signal_and_mode(tmp_path):
+    audit_file = tmp_path / "execution_audit.jsonl"
+
+    entries = (
+        ("BUY", "PAPER"),
+        ("SELL", "PAPER"),
+        ("BUY", "PAPER"),
+    )
+
+    for signal, mode in entries:
+        audit = create_execution_audit(
+            {
+                "status": "PAPER_ACCEPTED",
+                "mode": mode,
+            },
+            {
+                "signal": signal,
+                "entry": 100,
+                "stop_loss": 95,
+                "take_profit": 110,
+            },
+        )
+        persist_execution_audit(audit, audit_file)
+
+    from analysis.execution_audit import query_execution_audits
+
+    records = query_execution_audits(
+        audit_file,
+        signal="BUY",
+        mode="PAPER",
+    )
+
+    assert len(records) == 2
+    assert all(record["signal"] == "BUY" for record in records)
+
+
+def test_query_execution_audits_limit_returns_latest(tmp_path):
+    audit_file = tmp_path / "execution_audit.jsonl"
+
+    for signal in ("BUY", "SELL", "BUY"):
+        audit = create_execution_audit(
+            {
+                "status": "PAPER_ACCEPTED",
+                "mode": "PAPER",
+            },
+            {
+                "signal": signal,
+                "entry": 100,
+                "stop_loss": 95,
+                "take_profit": 110,
+            },
+        )
+        persist_execution_audit(audit, audit_file)
+
+    from analysis.execution_audit import query_execution_audits
+
+    records = query_execution_audits(
+        audit_file,
+        limit=2,
+    )
+
+    assert len(records) == 2
+    assert records[0]["signal"] == "SELL"
+    assert records[1]["signal"] == "BUY"
+
+
+def test_query_execution_audits_invalid_limit(tmp_path):
+    audit_file = tmp_path / "execution_audit.jsonl"
+
+    from analysis.execution_audit import query_execution_audits
+
+    assert query_execution_audits(
+        audit_file,
+        limit=0,
+    ) == []
+
+    assert query_execution_audits(
+        audit_file,
+        limit="2",
+    ) == []
