@@ -158,3 +158,216 @@ def test_closed_session_cannot_accept_new_order():
     )
 
     assert result["status"] == "REJECTED"
+
+
+def test_update_session_closes_buy_order():
+    from analysis.paper_session import update_session_orders
+
+    session = create_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        starting_balance=10000,
+    )
+
+    add_session_order(
+        session,
+        {
+            "status": "OPEN",
+            "signal": "BUY",
+            "entry": 100.0,
+            "stop_loss": 95.0,
+            "take_profit": 110.0,
+            "pnl": 0,
+        },
+    )
+
+    result = update_session_orders(
+        session,
+        [
+            {
+                "high": 112.0,
+                "low": 99.0,
+            }
+        ],
+    )
+
+    assert result["status"] == "UPDATED"
+    assert result["orders_updated"] == 1
+    assert result["orders_closed"] == 1
+    assert session["orders"][0]["status"] == "CLOSED"
+    assert session["orders"][0]["result"] == "WIN"
+    assert session["orders"][0]["pnl"] == 10.0
+
+
+def test_update_session_closes_sell_order():
+    from analysis.paper_session import update_session_orders
+
+    session = create_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        starting_balance=10000,
+    )
+
+    add_session_order(
+        session,
+        {
+            "status": "OPEN",
+            "signal": "SELL",
+            "entry": 100.0,
+            "stop_loss": 105.0,
+            "take_profit": 90.0,
+            "pnl": 0,
+        },
+    )
+
+    result = update_session_orders(
+        session,
+        [
+            {
+                "high": 95.0,
+                "low": 89.0,
+            }
+        ],
+    )
+
+    assert result["status"] == "UPDATED"
+    assert result["orders_closed"] == 1
+    assert session["orders"][0]["status"] == "CLOSED"
+    assert session["orders"][0]["result"] == "WIN"
+    assert session["orders"][0]["pnl"] == 10.0
+
+
+def test_update_session_keeps_order_open_when_targets_not_hit():
+    from analysis.paper_session import update_session_orders
+
+    session = create_paper_session()
+
+    add_session_order(
+        session,
+        {
+            "status": "OPEN",
+            "signal": "BUY",
+            "entry": 100.0,
+            "stop_loss": 95.0,
+            "take_profit": 110.0,
+            "pnl": 0,
+        },
+    )
+
+    result = update_session_orders(
+        session,
+        [
+            {
+                "high": 105.0,
+                "low": 99.0,
+            }
+        ],
+    )
+
+    assert result["status"] == "UPDATED"
+    assert result["orders_updated"] == 1
+    assert result["orders_closed"] == 0
+    assert session["orders"][0]["status"] == "OPEN"
+
+
+def test_session_snapshot_reflects_closed_trade():
+    from analysis.paper_session import get_session_snapshot
+
+    session = create_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        starting_balance=10000,
+    )
+
+    add_session_order(
+        session,
+        {
+            "status": "CLOSED",
+            "signal": "BUY",
+            "entry": 100.0,
+            "stop_loss": 95.0,
+            "take_profit": 110.0,
+            "exit_price": 110.0,
+            "result": "WIN",
+            "pnl": 10.0,
+            "risk_amount": 5.0,
+        },
+    )
+
+    snapshot = get_session_snapshot(session)
+
+    assert snapshot["status"] == "VALID"
+    assert snapshot["orders"] == 1
+    assert snapshot["open_trades"] == 0
+    assert snapshot["performance"]["net_pnl"] == 10.0
+    assert snapshot["performance"]["ending_equity"] == 10010.0
+
+
+def test_session_snapshot_counts_open_trade():
+    from analysis.paper_session import get_session_snapshot
+
+    session = create_paper_session(
+        starting_balance=10000,
+    )
+
+    add_session_order(
+        session,
+        {
+            "status": "OPEN",
+            "signal": "BUY",
+            "entry": 100.0,
+            "stop_loss": 95.0,
+            "take_profit": 110.0,
+            "pnl": 0,
+        },
+    )
+
+    snapshot = get_session_snapshot(session)
+
+    assert snapshot["status"] == "VALID"
+    assert snapshot["orders"] == 1
+    assert snapshot["open_trades"] == 1
+    assert snapshot["performance"]["net_pnl"] == 0.0
+
+
+def test_update_session_rejects_invalid_candles():
+    from analysis.paper_session import update_session_orders
+
+    session = create_paper_session()
+
+    result = update_session_orders(
+        session,
+        "invalid",
+    )
+
+    assert result["status"] == "REJECTED"
+
+
+def test_closed_order_is_not_updated_again():
+    from analysis.paper_session import update_session_orders
+
+    session = create_paper_session()
+
+    add_session_order(
+        session,
+        {
+            "status": "CLOSED",
+            "signal": "BUY",
+            "pnl": 25.0,
+        },
+    )
+
+    result = update_session_orders(
+        session,
+        [
+            {
+                "high": 200.0,
+                "low": 1.0,
+            }
+        ],
+    )
+
+    assert result["status"] == "UPDATED"
+    assert result["orders_updated"] == 0
+    assert result["orders_closed"] == 0
+    assert session["orders"][0]["pnl"] == 25.0

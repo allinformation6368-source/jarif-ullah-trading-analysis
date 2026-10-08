@@ -129,3 +129,77 @@ def close_paper_session(session):
         "timestamp": session.get("timestamp"),
         "performance": performance["performance"],
     }
+
+
+def update_session_orders(session, candles):
+    if not isinstance(session, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid session",
+        }
+
+    if session.get("status") != "READY":
+        return {
+            "status": "REJECTED",
+            "reason": "Session is not ready",
+        }
+
+    if not isinstance(candles, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid candles",
+        }
+
+    from analysis.paper_trading import process_paper_position
+
+    updated = 0
+    closed = 0
+
+    for order in session.get("orders", []):
+        if not isinstance(order, dict):
+            continue
+
+        if order.get("status") != "OPEN":
+            continue
+
+        result = process_paper_position(
+            order=order,
+            candles=candles,
+        )
+
+        if result.get("status") == "REJECTED":
+            return result
+
+        updated += 1
+
+        if result.get("status") == "CLOSED":
+            closed += 1
+
+    return {
+        "status": "UPDATED",
+        "orders_updated": updated,
+        "orders_closed": closed,
+        "orders": len(session.get("orders", [])),
+    }
+
+
+def get_session_snapshot(session):
+    performance = get_session_performance(session)
+
+    if performance["status"] != "VALID":
+        return performance
+
+    open_trades = performance["performance"].get(
+        "open_trades",
+        0,
+    )
+
+    return {
+        "status": "VALID",
+        "symbol": session.get("symbol"),
+        "mode": session.get("mode"),
+        "session_status": session.get("status"),
+        "orders": len(session.get("orders", [])),
+        "open_trades": open_trades,
+        "performance": performance["performance"],
+    }
