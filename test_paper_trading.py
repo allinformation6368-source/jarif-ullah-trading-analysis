@@ -7,6 +7,7 @@ from analysis.paper_trading import (
     create_paper_account,
     add_paper_order,
     update_paper_account,
+    run_paper_session,
 )
 
 
@@ -269,3 +270,87 @@ def test_update_paper_account_from_orders():
     assert result["balance"] == 10050
     assert result["equity"] == 10050
     assert result["orders"] == 3
+
+
+def test_run_paper_session_with_buy_win():
+    candles = [
+        {"high": 101, "low": 99, "close": 100},
+        {"high": 103, "low": 98, "close": 102},
+        {"high": 111, "low": 101, "close": 110},
+    ]
+
+    def analyze_function(
+        history,
+        account_balance=10000,
+        risk_percent=1,
+    ):
+        return {
+            "trade_plan": ready_plan("BUY")
+            if len(history) == 1
+            else {
+                "status": "WAIT",
+            }
+        }
+
+    result = run_paper_session(
+        candles=candles,
+        analyze_function=analyze_function,
+        account_balance=10000,
+    )
+
+    assert result["status"] == "VALID"
+    assert len(result["orders"]) == 1
+    assert result["orders"][0]["status"] == "CLOSED"
+    assert result["orders"][0]["result"] == "WIN"
+    assert result["orders"][0]["pnl"] == 10
+    assert result["account"]["balance"] == 10010
+    assert result["account"]["realized_pnl"] == 10
+
+
+def test_run_paper_session_ignores_non_ready_signals():
+    candles = [
+        {"high": 101, "low": 99, "close": 100},
+        {"high": 103, "low": 98, "close": 102},
+    ]
+
+    def analyze_function(
+        history,
+        account_balance=10000,
+        risk_percent=1,
+    ):
+        return {
+            "trade_plan": {
+                "status": "WAIT",
+            }
+        }
+
+    result = run_paper_session(
+        candles=candles,
+        analyze_function=analyze_function,
+    )
+
+    assert result["status"] == "VALID"
+    assert result["orders"] == []
+    assert result["account"]["balance"] == 10000
+    assert result["account"]["realized_pnl"] == 0
+
+
+def test_run_paper_session_empty_candles():
+    result = run_paper_session(
+        candles=[],
+        analyze_function=lambda *args, **kwargs: {},
+        account_balance=5000,
+    )
+
+    assert result["status"] == "WAIT"
+    assert result["orders"] == []
+    assert result["account"]["balance"] == 5000
+
+
+def test_run_paper_session_rejects_invalid_candles():
+    result = run_paper_session(
+        candles=None,
+        analyze_function=lambda *args, **kwargs: {},
+    )
+
+    assert result["status"] == "REJECTED"

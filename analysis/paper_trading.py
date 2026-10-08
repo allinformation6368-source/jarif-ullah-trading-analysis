@@ -323,3 +323,79 @@ def update_paper_account(account, orders):
         "equity": account["equity"],
         "orders": len(account["orders"]),
     }
+
+
+def run_paper_session(
+    candles,
+    analyze_function,
+    account_balance=10000,
+    risk_percent=1,
+):
+    if not isinstance(candles, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid candles",
+        }
+
+    if not candles:
+        return {
+            "status": "WAIT",
+            "orders": [],
+            "account": create_paper_account(account_balance),
+        }
+
+    account = create_paper_account(account_balance)
+
+    if account.get("status") != "READY":
+        return account
+
+    orders = []
+
+    for index in range(len(candles)):
+        history = candles[:index + 1]
+
+        result = analyze_function(
+            history,
+            account_balance=account["balance"],
+            risk_percent=risk_percent,
+        )
+
+        if not isinstance(result, dict):
+            continue
+
+        trade_plan = result.get("trade_plan")
+
+        if not isinstance(trade_plan, dict):
+            continue
+
+        if trade_plan.get("status") != "READY":
+            continue
+
+        order = create_paper_order(
+            trade_plan=trade_plan,
+            account_balance=account["balance"],
+        )
+
+        if order.get("status") != "OPEN":
+            continue
+
+        future_candles = candles[index + 1:]
+
+        if future_candles:
+            order = process_paper_position(
+                order=order,
+                candles=future_candles,
+            )
+
+        orders.append(order)
+
+        update_paper_account(
+            account=account,
+            orders=orders,
+        )
+
+    return {
+        "status": "VALID",
+        "orders": orders,
+        "account": account,
+    }
