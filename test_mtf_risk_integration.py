@@ -60,8 +60,41 @@ def test_mtf_wait_has_no_risk():
     assert result["risk"] is None
 
 
+def test_mtf_ready_calculates_position_size():
+    candles = make_bullish_candles()
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": candles,
+            "15m": candles,
+            "1h": candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    assert result["decision"]["decision"] == "ENTRY_READY"
+
+    risk = result["risk"]
+
+    assert risk is not None
+    assert risk["status"] == "VALID"
+
+    sizing = result["position_sizing"]
+
+    assert sizing is not None
+    assert sizing["status"] == "VALID"
+    assert sizing["account_balance"] == 10000
+    assert sizing["risk_percent"] == 1
+    assert sizing["risk_amount"] == 100
+    assert sizing["entry"] == risk["entry"]
+    assert sizing["stop_loss"] == risk["stop_loss"]
+    assert sizing["position_size"] > 0
+
+
 if __name__ == "__main__":
     test_mtf_ready_calculates_real_risk()
     test_mtf_wait_has_no_risk()
+    test_mtf_ready_calculates_position_size()
 
-    print("MTF RISK INTEGRATION CONTRACT TEST: SUCCESS")
+    print("MTF RISK + POSITION SIZING CONTRACT TEST: SUCCESS")

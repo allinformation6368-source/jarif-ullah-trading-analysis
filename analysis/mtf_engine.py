@@ -3,6 +3,7 @@ from analysis.mtf_confluence import calculate_mtf_confluence
 from analysis.trade_decision import evaluate_trade_decision
 from analysis.entry_quality import evaluate_entry_quality
 from analysis.risk_management import calculate_smc_risk_from_candles
+from analysis.position_sizing import calculate_position_size
 from config.timeframes import TRADING_MODES
 
 
@@ -20,7 +21,12 @@ def _get_execution_timeframe(timeframes, mode=None):
     return None
 
 
-def analyze_multi_timeframe(timeframes, mode=None):
+def analyze_multi_timeframe(
+    timeframes,
+    mode=None,
+    account_balance=None,
+    risk_percent=None,
+):
     results = {}
 
     for timeframe, candles in timeframes.items():
@@ -41,6 +47,7 @@ def analyze_multi_timeframe(timeframes, mode=None):
     )
 
     risk = None
+    position_sizing = None
 
     if decision["decision"] == "ENTRY_READY":
         execution_timeframe = _get_execution_timeframe(
@@ -56,10 +63,23 @@ def analyze_multi_timeframe(timeframes, mode=None):
                 risk_reward=2,
             )
 
+            if (
+                risk["status"] == "VALID"
+                and account_balance is not None
+                and risk_percent is not None
+            ):
+                position_sizing = calculate_position_size(
+                    account_balance=account_balance,
+                    risk_percent=risk_percent,
+                    entry=risk["entry"],
+                    stop_loss=risk["stop_loss"],
+                )
+
     return {
         "timeframes": results,
         "confluence": final_confluence,
         "decision": decision,
         "entry_quality": entry_quality,
         "risk": risk,
+        "position_sizing": position_sizing,
     }
