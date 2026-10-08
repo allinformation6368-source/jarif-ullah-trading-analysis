@@ -72,6 +72,19 @@ def execute_paper_order(
     if risk_config["status"] != "VALID":
         return risk_config
 
+    paper_order = {
+        "status": "OPEN",
+        "signal": order["signal"],
+        "entry": order["entry"],
+        "stop_loss": order["stop_loss"],
+        "take_profit": order["take_profit"],
+        "risk_guard": order["risk_guard"],
+        "account_balance": account_balance,
+        "exit_price": None,
+        "result": None,
+        "pnl": 0,
+    }
+
     return {
         "status": "PAPER_ACCEPTED",
         "mode": "PAPER",
@@ -83,6 +96,7 @@ def execute_paper_order(
         "account_balance": account_balance,
         "risk_percent": risk_percent,
         "risk_reward": risk_reward,
+        "order": paper_order,
     }
 
 
