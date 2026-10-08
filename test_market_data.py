@@ -146,7 +146,16 @@ def test_fetch_multi_timeframe_stops_on_failure(monkeypatch):
 
         return {
             "status": "VALID",
-            "candles": [],
+            "candles": [
+                {
+                    "datetime": "2026-01-01 00:00:00",
+                    "open": 100.0,
+                    "high": 110.0,
+                    "low": 95.0,
+                    "close": 105.0,
+                    "volume": None,
+                }
+            ],
         }
 
     monkeypatch.setattr(
@@ -161,3 +170,60 @@ def test_fetch_multi_timeframe_stops_on_failure(monkeypatch):
 
     assert result["status"] == "REJECTED"
     assert "5min" in result["reason"]
+
+
+def test_fetch_multi_timeframe_rejects_empty_list():
+    result = fetch_multi_timeframe_data(
+        "BTC/USD",
+        [],
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Timeframes cannot be empty"
+
+
+def test_fetch_multi_timeframe_rejects_duplicate_timeframe():
+    result = fetch_multi_timeframe_data(
+        "BTC/USD",
+        ["1min", "5min", "1min"],
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Duplicate timeframe"
+
+
+def test_fetch_multi_timeframe_rejects_invalid_timeframe_entry():
+    result = fetch_multi_timeframe_data(
+        "BTC/USD",
+        ["1min", ""],
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Invalid timeframe"
+
+
+def test_fetch_multi_timeframe_rejects_empty_candle_data(monkeypatch):
+    def fake_fetch(
+        symbol,
+        interval,
+        outputsize,
+    ):
+        return {
+            "status": "VALID",
+            "candles": [],
+        }
+
+    monkeypatch.setattr(
+        "data.market_data.fetch_twelve_data_candles",
+        fake_fetch,
+    )
+
+    result = fetch_multi_timeframe_data(
+        "BTC/USD",
+        ["1min"],
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == (
+        "Empty candle data for timeframe 1min"
+    )

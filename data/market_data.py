@@ -44,6 +44,25 @@ def fetch_multi_timeframe_data(
             "reason": "Timeframes must be a list or tuple",
         }
 
+    if not timeframes:
+        return {
+            "status": "REJECTED",
+            "reason": "Timeframes cannot be empty",
+        }
+
+    if len(set(timeframes)) != len(timeframes):
+        return {
+            "status": "REJECTED",
+            "reason": "Duplicate timeframe",
+        }
+
+    for timeframe in timeframes:
+        if not isinstance(timeframe, str) or not timeframe.strip():
+            return {
+                "status": "REJECTED",
+                "reason": "Invalid timeframe",
+            }
+
     results = {}
 
     for timeframe in timeframes:
@@ -61,7 +80,15 @@ def fetch_multi_timeframe_data(
                 f"{result.get('reason', 'Unknown error')}",
             }
 
-        results[timeframe] = result["candles"]
+        candles = result.get("candles")
+
+        if not isinstance(candles, list) or not candles:
+            return {
+                "status": "REJECTED",
+                "reason": f"Empty candle data for timeframe {timeframe}",
+            }
+
+        results[timeframe] = candles
 
     return {
         "status": "VALID",
