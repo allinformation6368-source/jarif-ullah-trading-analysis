@@ -144,3 +144,41 @@ if __name__ == "__main__":
     test_mtf_wait_has_no_risk_guard()
 
     print("MTF RISK + POSITION SIZING + RISK GUARD CONTRACT TEST: SUCCESS")
+
+
+def test_mtf_ready_has_unified_trade_plan():
+    candles = make_bullish_candles()
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": candles,
+            "15m": candles,
+            "1h": candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    plan = result["trade_plan"]
+
+    assert plan is not None
+    assert plan["status"] == "READY"
+    assert plan["signal"] == "LONG"
+    assert plan["entry"] == result["risk"]["entry"]
+    assert plan["stop_loss"] == result["risk"]["stop_loss"]
+    assert plan["take_profit"] == result["risk"]["take_profit"]
+    assert plan["position_size"] == result["position_sizing"]["position_size"]
+    assert plan["risk_guard"] == "APPROVED"
+
+
+def test_mtf_wait_has_no_unified_trade_plan():
+    result = analyze_multi_timeframe(
+        {
+            "5m": [],
+            "15m": [],
+            "1h": [],
+        }
+    )
+
+    assert result["decision"]["decision"] == "WAIT"
+    assert result["trade_plan"]["status"] == "WAIT"

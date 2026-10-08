@@ -5,6 +5,7 @@ from analysis.entry_quality import evaluate_entry_quality
 from analysis.risk_management import calculate_smc_risk_from_candles
 from analysis.position_sizing import calculate_position_size
 from analysis.risk_guard import validate_trade_risk
+from analysis.unified_trade_plan import build_unified_trade_plan
 from config.timeframes import TRADING_MODES
 
 
@@ -82,6 +83,14 @@ def analyze_multi_timeframe(
                 position_sizing=position_sizing,
             )
 
+    trade_plan = build_unified_trade_plan(
+        decision=decision,
+        risk=risk,
+        position_sizing=position_sizing,
+        risk_guard=risk_guard,
+        entry_quality=entry_quality,
+    )
+
     return {
         "timeframes": results,
         "confluence": final_confluence,
@@ -90,4 +99,5 @@ def analyze_multi_timeframe(
         "risk": risk,
         "position_sizing": position_sizing,
         "risk_guard": risk_guard,
+        "trade_plan": trade_plan,
     }
