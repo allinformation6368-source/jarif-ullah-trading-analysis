@@ -203,3 +203,63 @@ def get_session_snapshot(session):
         "open_trades": open_trades,
         "performance": performance["performance"],
     }
+
+
+def build_session_audit_summary(session, audits):
+    if not isinstance(session, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid session",
+        }
+
+    if not isinstance(audits, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid audits",
+        }
+
+    session_orders = session.get("orders", [])
+
+    accepted = sum(
+        1
+        for audit in audits
+        if isinstance(audit, dict)
+        and audit.get("status") == "PAPER_ACCEPTED"
+    )
+
+    rejected = sum(
+        1
+        for audit in audits
+        if isinstance(audit, dict)
+        and audit.get("status") == "REJECTED"
+    )
+
+    closed_orders = sum(
+        1
+        for order in session_orders
+        if isinstance(order, dict)
+        and order.get("status") == "CLOSED"
+    )
+
+    open_orders = sum(
+        1
+        for order in session_orders
+        if isinstance(order, dict)
+        and order.get("status") == "OPEN"
+    )
+
+    performance = get_session_performance(session)
+
+    if performance["status"] != "VALID":
+        return performance
+
+    return {
+        "status": "VALID",
+        "audit_count": len(audits),
+        "accepted_audits": accepted,
+        "rejected_audits": rejected,
+        "session_orders": len(session_orders),
+        "open_orders": open_orders,
+        "closed_orders": closed_orders,
+        "performance": performance["performance"],
+    }
