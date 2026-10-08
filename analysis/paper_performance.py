@@ -118,3 +118,76 @@ def calculate_paper_performance(trades, starting_equity=0.0):
         "ending_equity": ending_equity,
         "average_r": average_r,
     }
+
+
+def calculate_account_performance(account):
+    if not isinstance(account, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid account",
+        }
+
+    if account.get("status") != "READY":
+        return {
+            "status": "REJECTED",
+            "reason": "Account is not ready",
+        }
+
+    orders = account.get("orders")
+
+    if not isinstance(orders, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid account orders",
+        }
+
+    closed_trades = [
+        order
+        for order in orders
+        if isinstance(order, dict)
+        and order.get("status") == "CLOSED"
+    ]
+
+    starting_equity = account.get("starting_balance", 0.0)
+
+    result = calculate_paper_performance(
+        closed_trades,
+        starting_equity=starting_equity,
+    )
+
+    if result["status"] != "VALID":
+        return result
+
+    result["open_trades"] = sum(
+        1
+        for order in orders
+        if isinstance(order, dict)
+        and order.get("status") == "OPEN"
+    )
+
+    result["account_realized_pnl"] = account.get(
+        "realized_pnl",
+        result["net_pnl"],
+    )
+
+    return result
+
+
+def calculate_orders_performance(orders, starting_balance=0.0):
+    if not isinstance(orders, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid orders",
+        }
+
+    closed_orders = [
+        order
+        for order in orders
+        if isinstance(order, dict)
+        and order.get("status") == "CLOSED"
+    ]
+
+    return calculate_paper_performance(
+        closed_orders,
+        starting_equity=starting_balance,
+    )

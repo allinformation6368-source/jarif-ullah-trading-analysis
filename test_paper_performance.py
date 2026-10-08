@@ -91,3 +91,99 @@ def test_invalid_starting_equity_is_rejected():
     )
 
     assert result["status"] == "REJECTED"
+
+
+def test_account_performance_uses_closed_orders():
+    from analysis.paper_performance import calculate_account_performance
+
+    account = {
+        "status": "READY",
+        "starting_balance": 10000,
+        "balance": 10120,
+        "realized_pnl": 120,
+        "equity": 10120,
+        "orders": [
+            {
+                "status": "CLOSED",
+                "signal": "BUY",
+                "pnl": 100.0,
+                "risk_amount": 50.0,
+            },
+            {
+                "status": "CLOSED",
+                "signal": "SELL",
+                "pnl": 20.0,
+                "risk_amount": 40.0,
+            },
+            {
+                "status": "OPEN",
+                "signal": "BUY",
+                "pnl": 0,
+            },
+        ],
+    }
+
+    result = calculate_account_performance(account)
+
+    assert result["status"] == "VALID"
+    assert result["total_trades"] == 2
+    assert result["net_pnl"] == 120.0
+    assert result["ending_equity"] == 10120.0
+    assert result["open_trades"] == 1
+    assert result["account_realized_pnl"] == 120
+
+
+def test_account_performance_rejects_invalid_account():
+    from analysis.paper_performance import calculate_account_performance
+
+    result = calculate_account_performance(None)
+
+    assert result["status"] == "REJECTED"
+
+
+def test_account_performance_rejects_non_ready_account():
+    from analysis.paper_performance import calculate_account_performance
+
+    result = calculate_account_performance({
+        "status": "CLOSED",
+        "starting_balance": 10000,
+        "orders": [],
+    })
+
+    assert result["status"] == "REJECTED"
+
+
+def test_orders_performance_ignores_open_orders():
+    from analysis.paper_performance import calculate_orders_performance
+
+    orders = [
+        {
+            "status": "CLOSED",
+            "pnl": 75.0,
+        },
+        {
+            "status": "OPEN",
+            "pnl": 0,
+        },
+    ]
+
+    result = calculate_orders_performance(
+        orders,
+        starting_balance=10000,
+    )
+
+    assert result["status"] == "VALID"
+    assert result["total_trades"] == 1
+    assert result["net_pnl"] == 75.0
+    assert result["ending_equity"] == 10075.0
+
+
+def test_orders_performance_rejects_invalid_orders():
+    from analysis.paper_performance import calculate_orders_performance
+
+    result = calculate_orders_performance(
+        "invalid",
+        starting_balance=10000,
+    )
+
+    assert result["status"] == "REJECTED"
