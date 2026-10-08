@@ -1,5 +1,6 @@
 from config.timeframes import TRADING_MODES
 from data.market_data import fetch_multi_timeframe_data
+from data.candle_freshness import validate_latest_candle_freshness
 
 
 def get_mode_timeframes(mode):
@@ -50,6 +51,19 @@ def fetch_mode_market_data(
 
     if result["status"] != "VALID":
         return result
+
+    for timeframe, candles in result["timeframes"].items():
+        freshness = validate_latest_candle_freshness(
+            candles=candles,
+            timeframe=timeframe,
+        )
+
+        if freshness["status"] != "VALID":
+            return {
+                "status": "REJECTED",
+                "reason": freshness["reason"],
+                "timeframe": timeframe,
+            }
 
     return {
         "status": "VALID",
