@@ -31,6 +31,8 @@ def run_live_paper_analysis(
     if not paper_order:
         return {
             "status": "NO_TRADE",
+            "symbol": symbol,
+            "mode": mode,
             "reason": "No paper order generated",
             "analysis": analysis_result,
             "execution": None,
