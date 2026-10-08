@@ -264,3 +264,51 @@ def test_mtf_empty_data_has_no_session():
 
     assert result["session"] is None
     assert result["session_filter"] is None
+
+
+def test_mtf_blocked_session_prevents_entry():
+    candles = make_bullish_candles()
+
+    blocked_candles = []
+    for candle in candles:
+        updated = dict(candle)
+        updated["datetime"] = "2026-10-07T22:30:00+00:00"
+        blocked_candles.append(updated)
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": blocked_candles,
+            "15m": blocked_candles,
+            "1h": blocked_candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    assert result["session_filter"]["status"] == "BLOCKED"
+    assert result["decision"]["decision"] == "WAIT"
+    assert result["decision"]["reason"] == "Session not allowed"
+    assert result["risk"] is None
+    assert result["trade_plan"]["status"] == "WAIT"
+
+
+def test_mtf_allowed_session_keeps_normal_flow():
+    candles = make_bullish_candles()
+
+    allowed_candles = []
+    for candle in candles:
+        updated = dict(candle)
+        updated["datetime"] = "2026-10-07T10:30:00+00:00"
+        allowed_candles.append(updated)
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": allowed_candles,
+            "15m": allowed_candles,
+            "1h": allowed_candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    assert result["session_filter"]["status"] == "APPROVED"

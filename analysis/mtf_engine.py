@@ -107,6 +107,21 @@ def analyze_multi_timeframe(
                 position_sizing=position_sizing,
             )
 
+    if (
+        decision["decision"] == "ENTRY_READY"
+        and session_filter is not None
+        and session_filter.get("status") == "BLOCKED"
+    ):
+        decision = {
+            "decision": "WAIT",
+            "signal": decision.get("signal"),
+            "reason": "Session not allowed",
+        }
+
+        risk = None
+        position_sizing = None
+        risk_guard = None
+
     trade_plan = build_unified_trade_plan(
         decision=decision,
         risk=risk,
