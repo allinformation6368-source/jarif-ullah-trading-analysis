@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 TIMEFRAME_INTERVALS = {
@@ -14,9 +14,12 @@ TIMEFRAME_INTERVALS = {
 
 def _parse_datetime(value):
     try:
-        return datetime.fromisoformat(
+        timestamp = datetime.fromisoformat(
             str(value).replace("Z", "+00:00")
         )
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+        return timestamp.astimezone(timezone.utc)
     except (TypeError, ValueError):
         return None
 

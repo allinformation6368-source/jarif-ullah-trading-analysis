@@ -101,3 +101,27 @@ def test_empty_candles_are_rejected():
     )
 
     assert result["status"] == "REJECTED"
+
+
+def test_session_continuity_accepts_naive_and_utc_timestamps():
+    result = validate_session_aware_continuity(
+        [
+            candle("2026-01-01 00:00:00"),
+            candle("2026-01-01T01:00:00+00:00"),
+        ],
+        "1h",
+    )
+
+    assert result["status"] == "VALID"
+
+
+def test_session_continuity_normalizes_timezone_offsets():
+    result = validate_session_aware_continuity(
+        [
+            candle("2026-01-01T00:00:00+00:00"),
+            candle("2026-01-01T06:30:00+05:30"),
+        ],
+        "1h",
+    )
+
+    assert result["status"] == "VALID"

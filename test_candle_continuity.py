@@ -121,3 +121,39 @@ def test_all_supported_timeframes_have_intervals():
         )
 
         assert result["status"] == "VALID"
+
+
+def test_continuity_accepts_naive_and_utc_timestamps():
+    result = validate_candle_continuity(
+        [
+            {"datetime": "2026-01-01 00:00:00"},
+            {"datetime": "2026-01-01T01:00:00+00:00"},
+        ],
+        "1h",
+    )
+
+    assert result["status"] == "VALID"
+
+
+def test_continuity_normalizes_positive_timezone_offset():
+    result = validate_candle_continuity(
+        [
+            {"datetime": "2026-01-01T05:00:00+05:30"},
+            {"datetime": "2026-01-01T00:30:00+00:00"},
+        ],
+        "1h",
+    )
+
+    assert result["status"] == "VALID"
+
+
+def test_continuity_accepts_mixed_timezone_sequence():
+    result = validate_candle_continuity(
+        [
+            {"datetime": "2026-01-01T00:00:00+00:00"},
+            {"datetime": "2026-01-01T01:00:00+05:30"},
+        ],
+        "1h",
+    )
+
+    assert result["status"] == "REJECTED"
