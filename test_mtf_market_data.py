@@ -81,6 +81,13 @@ def test_fetch_mode_market_data(monkeypatch):
         "data.mtf_market_data.fetch_multi_timeframe_data",
         fake_fetch,
     )
+    monkeypatch.setattr(
+        "data.mtf_market_data.validate_latest_candle_freshness",
+        lambda candles, timeframe: {
+            "status": "VALID",
+            "age_seconds": 0,
+        },
+    )
 
     result = fetch_mode_market_data(
         symbol="BTC/USD",
