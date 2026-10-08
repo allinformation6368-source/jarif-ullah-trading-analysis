@@ -28,6 +28,12 @@ def create_paper_order(
                 "reason": f"Missing trade field: {field}",
             }
 
+    if trade_plan.get("risk_guard") != "APPROVED":
+        return {
+            "status": "REJECTED",
+            "reason": "Risk guard approval required",
+        }
+
     if account_balance <= 0:
         return {
             "status": "REJECTED",
@@ -48,6 +54,7 @@ def create_paper_order(
         "entry": trade_plan["entry"],
         "stop_loss": trade_plan["stop_loss"],
         "take_profit": trade_plan["take_profit"],
+        "risk_guard": trade_plan["risk_guard"],
         "account_balance": account_balance,
         "exit_price": None,
         "result": None,

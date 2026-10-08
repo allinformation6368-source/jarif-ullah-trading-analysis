@@ -25,6 +25,7 @@ def validate_execution_order(order):
         "entry",
         "stop_loss",
         "take_profit",
+        "risk_guard",
     )
 
     for field in required_fields:
@@ -33,6 +34,12 @@ def validate_execution_order(order):
                 "status": "REJECTED",
                 "reason": f"Missing order field: {field}",
             }
+
+    if order["risk_guard"] != "APPROVED":
+        return {
+            "status": "REJECTED",
+            "reason": "Risk guard approval required",
+        }
 
     if order["signal"] not in ("BUY", "SELL"):
         return {
@@ -72,6 +79,7 @@ def execute_paper_order(
         "entry": order["entry"],
         "stop_loss": order["stop_loss"],
         "take_profit": order["take_profit"],
+        "risk_guard": order["risk_guard"],
         "account_balance": account_balance,
         "risk_percent": risk_percent,
         "risk_reward": risk_reward,

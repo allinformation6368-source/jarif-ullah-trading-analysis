@@ -18,6 +18,7 @@ def ready_plan(signal="BUY"):
         "entry": 100,
         "stop_loss": 95 if signal == "BUY" else 105,
         "take_profit": 110 if signal == "BUY" else 90,
+        "risk_guard": "APPROVED",
     }
 
 

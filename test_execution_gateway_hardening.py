@@ -7,6 +7,7 @@ def valid_order():
         "entry": 100.0,
         "stop_loss": 95.0,
         "take_profit": 110.0,
+        "risk_guard": "APPROVED",
     }
 
 
@@ -59,6 +60,7 @@ def test_validate_execution_order_rejects_missing_take_profit():
 
 def test_validate_execution_order_rejects_invalid_signal():
     order = valid_order()
+    order["risk_guard"] = "APPROVED"
     order["signal"] = "INVALID"
 
     result = gateway.validate_execution_order(order)
@@ -204,3 +206,98 @@ def test_execution_audit_does_not_expose_unrelated_order_fields(monkeypatch):
     assert result["status"] == "PAPER_ACCEPTED"
     assert len(captured) == 1
     assert "secret_internal_field" not in captured[0]
+
+
+def test_execution_gateway_rejects_order_without_risk_guard():
+    from analysis.execution_gateway import execute_order
+
+    order = {
+        "signal": "BUY",
+        "entry": 100.0,
+        "stop_loss": 95.0,
+        "take_profit": 110.0,
+    }
+
+    result = execute_order(
+        order=order,
+        mode="PAPER",
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Missing order field: risk_guard"
+
+
+def test_execution_gateway_rejects_unapproved_risk_guard():
+    from analysis.execution_gateway import execute_order
+
+    order = {
+        "signal": "BUY",
+        "entry": 100.0,
+        "stop_loss": 95.0,
+        "take_profit": 110.0,
+        "risk_guard": "REJECTED",
+    }
+
+    result = execute_order(
+        order=order,
+        mode="PAPER",
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Risk guard approval required"
+
+
+def test_execution_gateway_accepts_risk_guard_approved_order():
+    from analysis.execution_gateway import execute_order
+
+    order = {
+        "signal": "BUY",
+        "entry": 100.0,
+        "stop_loss": 95.0,
+        "take_profit": 110.0,
+        "risk_guard": "APPROVED",
+    }
+
+    result = execute_order(
+        order=order,
+        mode="PAPER",
+    )
+
+    assert result["status"] == "PAPER_ACCEPTED"
+    assert result["mode"] == "PAPER"
+    assert result["risk_guard"] == "APPROVED"
+
+
+def test_create_paper_order_rejects_missing_risk_guard():
+    from analysis.paper_trading import create_paper_order
+
+    plan = {
+        "status": "READY",
+        "signal": "BUY",
+        "entry": 100.0,
+        "stop_loss": 95.0,
+        "take_profit": 110.0,
+    }
+
+    result = create_paper_order(plan)
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Risk guard approval required"
+
+
+def test_create_paper_order_carries_risk_guard_approval():
+    from analysis.paper_trading import create_paper_order
+
+    plan = {
+        "status": "READY",
+        "signal": "BUY",
+        "entry": 100.0,
+        "stop_loss": 95.0,
+        "take_profit": 110.0,
+        "risk_guard": "APPROVED",
+    }
+
+    result = create_paper_order(plan)
+
+    assert result["status"] == "OPEN"
+    assert result["risk_guard"] == "APPROVED"

@@ -33,6 +33,7 @@ def test_full_paper_execution_audit_chain(monkeypatch, tmp_path):
                     "entry": 100.0,
                     "stop_loss": 95.0,
                     "take_profit": 110.0,
+                    "risk_guard": "APPROVED",
                 }
             },
         }
@@ -93,6 +94,7 @@ def test_full_chain_does_not_create_live_execution(monkeypatch, tmp_path):
                     "entry": 200.0,
                     "stop_loss": 205.0,
                     "take_profit": 190.0,
+                    "risk_guard": "APPROVED",
                 }
             },
         }

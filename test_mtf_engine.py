@@ -52,6 +52,7 @@ def test_mtf_engine_creates_paper_order(monkeypatch):
         "risk": 5,
         "reward": 10,
         "risk_reward": 2,
+        "risk_guard": "APPROVED",
     }
 
     monkeypatch.setattr(
