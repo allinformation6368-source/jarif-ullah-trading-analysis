@@ -6,6 +6,7 @@ from analysis.risk_management import calculate_smc_risk_from_candles
 from analysis.position_sizing import calculate_position_size
 from analysis.risk_guard import validate_trade_risk
 from analysis.unified_trade_plan import build_unified_trade_plan
+from analysis.market_regime import detect_market_regime
 from config.timeframes import TRADING_MODES
 
 
@@ -30,6 +31,7 @@ def analyze_multi_timeframe(
     risk_percent=None,
 ):
     results = {}
+    market_regime = None
 
     for timeframe, candles in timeframes.items():
         results[timeframe] = analyze_timeframe(candles)
@@ -38,6 +40,23 @@ def analyze_multi_timeframe(
         results,
         mode=mode,
     )
+
+    regime_timeframe = _get_execution_timeframe(
+        timeframes,
+        mode=mode,
+    )
+
+    if regime_timeframe is None or not timeframes.get(regime_timeframe):
+        for timeframe in reversed(list(timeframes.keys())):
+            if timeframes.get(timeframe):
+                regime_timeframe = timeframe
+                break
+
+    if regime_timeframe is not None:
+        candles = timeframes.get(regime_timeframe, [])
+
+        if candles:
+            market_regime = detect_market_regime(candles)
 
     decision = evaluate_trade_decision(
         final_confluence
@@ -100,4 +119,5 @@ def analyze_multi_timeframe(
         "position_sizing": position_sizing,
         "risk_guard": risk_guard,
         "trade_plan": trade_plan,
+        "market_regime": market_regime,
     }

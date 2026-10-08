@@ -182,3 +182,40 @@ def test_mtf_wait_has_no_unified_trade_plan():
 
     assert result["decision"]["decision"] == "WAIT"
     assert result["trade_plan"]["status"] == "WAIT"
+
+
+def test_mtf_has_market_regime():
+    candles = make_bullish_candles()
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": candles,
+            "15m": candles,
+            "1h": candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    regime = result["market_regime"]
+
+    assert regime is not None
+    assert regime["status"] == "VALID"
+    assert regime["regime"] in (
+        "TRENDING_BULLISH",
+        "TRENDING_BEARISH",
+        "RANGING",
+        "NEUTRAL",
+    )
+
+
+def test_mtf_empty_data_has_no_market_regime():
+    result = analyze_multi_timeframe(
+        {
+            "5m": [],
+            "15m": [],
+            "1h": [],
+        }
+    )
+
+    assert result["market_regime"] is None
