@@ -4,6 +4,8 @@ from pathlib import Path
 
 
 DEFAULT_AUDIT_FILE = Path("logs/execution_audit.jsonl")
+DEFAULT_MAX_AUDIT_BYTES = 5 * 1024 * 1024
+DEFAULT_ROTATED_AUDIT_FILE = Path("logs/execution_audit.jsonl.1")
 
 
 def create_execution_audit(
@@ -65,9 +67,50 @@ def is_execution_successful(audit):
     )
 
 
+def rotate_execution_audit(
+    audit_file=DEFAULT_AUDIT_FILE,
+    max_bytes=DEFAULT_MAX_AUDIT_BYTES,
+    rotated_file=DEFAULT_ROTATED_AUDIT_FILE,
+):
+    audit_file = Path(audit_file)
+    rotated_file = Path(rotated_file)
+
+    if max_bytes <= 0:
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid max audit size",
+        }
+
+    if not audit_file.exists():
+        return {
+            "status": "NOT_NEEDED",
+            "path": str(audit_file),
+        }
+
+    if audit_file.stat().st_size < max_bytes:
+        return {
+            "status": "NOT_NEEDED",
+            "path": str(audit_file),
+        }
+
+    rotated_file.parent.mkdir(parents=True, exist_ok=True)
+
+    if rotated_file.exists():
+        rotated_file.unlink()
+
+    audit_file.replace(rotated_file)
+
+    return {
+        "status": "ROTATED",
+        "path": str(rotated_file),
+    }
+
+
 def persist_execution_audit(
     audit,
     audit_file=DEFAULT_AUDIT_FILE,
+    max_bytes=DEFAULT_MAX_AUDIT_BYTES,
+    rotated_file=DEFAULT_ROTATED_AUDIT_FILE,
 ):
     if not isinstance(audit, dict):
         return {
@@ -77,6 +120,12 @@ def persist_execution_audit(
 
     audit_file = Path(audit_file)
     audit_file.parent.mkdir(parents=True, exist_ok=True)
+
+    rotate_execution_audit(
+        audit_file=audit_file,
+        max_bytes=max_bytes,
+        rotated_file=rotated_file,
+    )
 
     with audit_file.open("a", encoding="utf-8") as file:
         file.write(json.dumps(audit, separators=(",", ":")) + "\n")
@@ -102,6 +151,12 @@ def read_execution_audits(
             line = line.strip()
 
             if line:
-                records.append(json.loads(line))
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                if isinstance(record, dict):
+                    records.append(record)
 
     return records
