@@ -1,7 +1,9 @@
 from config.timeframes import TRADING_MODES
 from data.market_data import fetch_multi_timeframe_data
 from data.candle_freshness import validate_latest_candle_freshness
+from data.candle_freshness import validate_latest_candle_freshness
 from data.candle_continuity import validate_candle_continuity
+from data.candle_session import validate_session_aware_continuity
 
 
 def get_mode_timeframes(mode):
@@ -37,6 +39,7 @@ def fetch_mode_market_data(
     mode,
     outputsize=500,
     provider="twelvedata",
+    session_profile=None,
 ):
     timeframe_result = get_mode_timeframes(mode)
 
@@ -66,10 +69,17 @@ def fetch_mode_market_data(
                 "timeframe": timeframe,
             }
 
-        continuity = validate_candle_continuity(
-            candles=candles,
-            timeframe=timeframe,
-        )
+        if session_profile is not None:
+            continuity = validate_session_aware_continuity(
+                candles=candles,
+                timeframe=timeframe,
+                profile=session_profile,
+            )
+        else:
+            continuity = validate_candle_continuity(
+                candles=candles,
+                timeframe=timeframe,
+            )
 
         if continuity["status"] != "VALID":
             return {

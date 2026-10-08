@@ -207,3 +207,116 @@ def test_fetch_mode_market_data_rejects_candle_gap(monkeypatch):
     assert result["status"] == "REJECTED"
     assert result["timeframe"] == "5min"
     assert "gap" in result["reason"].lower()
+
+
+def test_fetch_mode_market_data_allows_weekend_gap_for_weekday_profile(monkeypatch):
+    candles = [
+        {
+            "datetime": "2026-01-02 23:00:00",
+            "open": 100.0,
+            "high": 110.0,
+            "low": 95.0,
+            "close": 105.0,
+        },
+        {
+            "datetime": "2026-01-05 00:00:00",
+            "open": 105.0,
+            "high": 115.0,
+            "low": 100.0,
+            "close": 110.0,
+        },
+    ]
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.fetch_multi_timeframe_data",
+        lambda **kwargs: {
+            "status": "VALID",
+            "timeframes": {"1h": candles},
+        },
+    )
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.validate_latest_candle_freshness",
+        lambda **kwargs: {"status": "VALID"},
+    )
+
+    result = fetch_mode_market_data(
+        symbol="TEST",
+        mode="intraday",
+        session_profile="weekday",
+    )
+
+    assert result["status"] == "VALID"
+
+
+def test_fetch_mode_market_data_rejects_weekend_gap_for_24x7_profile(monkeypatch):
+    candles = [
+        {
+            "datetime": "2026-01-02 23:00:00",
+            "open": 100.0,
+            "high": 110.0,
+            "low": 95.0,
+            "close": 105.0,
+        },
+        {
+            "datetime": "2026-01-05 00:00:00",
+            "open": 105.0,
+            "high": 115.0,
+            "low": 100.0,
+            "close": 110.0,
+        },
+    ]
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.fetch_multi_timeframe_data",
+        lambda **kwargs: {
+            "status": "VALID",
+            "timeframes": {"1h": candles},
+        },
+    )
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.validate_latest_candle_freshness",
+        lambda **kwargs: {"status": "VALID"},
+    )
+
+    result = fetch_mode_market_data(
+        symbol="TEST",
+        mode="intraday",
+        session_profile="24x7",
+    )
+
+    assert result["status"] == "REJECTED"
+
+
+def test_fetch_mode_market_data_rejects_invalid_session_profile(monkeypatch):
+    candles = [
+        {
+            "datetime": "2026-01-05 10:00:00",
+            "open": 100.0,
+            "high": 110.0,
+            "low": 95.0,
+            "close": 105.0,
+        },
+    ]
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.fetch_multi_timeframe_data",
+        lambda **kwargs: {
+            "status": "VALID",
+            "timeframes": {"1h": candles},
+        },
+    )
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.validate_latest_candle_freshness",
+        lambda **kwargs: {"status": "VALID"},
+    )
+
+    result = fetch_mode_market_data(
+        symbol="TEST",
+        mode="intraday",
+        session_profile="invalid",
+    )
+
+    assert result["status"] == "REJECTED"
