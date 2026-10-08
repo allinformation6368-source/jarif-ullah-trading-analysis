@@ -9,6 +9,7 @@ from analysis.unified_trade_plan import build_unified_trade_plan
 from analysis.market_regime import detect_market_regime
 from analysis.session_filter import detect_session, validate_session
 from analysis.trade_journal import create_trade_record
+from analysis.paper_trading import create_paper_order
 from config.timeframes import TRADING_MODES
 
 
@@ -148,6 +149,18 @@ def analyze_multi_timeframe(
             session=session_name,
         )
 
+    paper_order = None
+
+    if trade_plan.get("status") == "READY":
+        paper_order = create_paper_order(
+            trade_plan=trade_plan,
+            account_balance=(
+                account_balance
+                if account_balance is not None
+                else 10000
+            ),
+        )
+
     return {
         "timeframes": results,
         "confluence": final_confluence,
@@ -158,6 +171,7 @@ def analyze_multi_timeframe(
         "risk_guard": risk_guard,
         "trade_plan": trade_plan,
         "trade_record": trade_record,
+        "paper_order": paper_order,
         "market_regime": market_regime,
         "session": session,
         "session_filter": session_filter,
