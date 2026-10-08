@@ -312,3 +312,46 @@ def test_mtf_allowed_session_keeps_normal_flow():
     )
 
     assert result["session_filter"]["status"] == "APPROVED"
+
+
+def test_mtf_ready_trade_creates_journal_record():
+    candles = make_bullish_candles()
+
+    allowed_candles = []
+    for candle in candles:
+        updated = dict(candle)
+        updated["datetime"] = "2026-10-07T10:30:00+00:00"
+        allowed_candles.append(updated)
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": allowed_candles,
+            "15m": allowed_candles,
+            "1h": allowed_candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    if result["trade_plan"]["status"] == "READY":
+        record = result["trade_record"]
+
+        assert record is not None
+        assert record["status"] == "RECORDED"
+        assert record["signal"] == result["trade_plan"]["signal"]
+        assert record["entry"] == result["trade_plan"]["entry"]
+        assert record["stop_loss"] == result["trade_plan"]["stop_loss"]
+        assert record["take_profit"] == result["trade_plan"]["take_profit"]
+        assert record["session"] == "LONDON"
+
+
+def test_mtf_wait_trade_has_no_journal_record():
+    result = analyze_multi_timeframe(
+        {
+            "5m": [],
+            "15m": [],
+            "1h": [],
+        }
+    )
+
+    assert result["trade_record"] is None

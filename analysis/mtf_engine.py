@@ -8,6 +8,7 @@ from analysis.risk_guard import validate_trade_risk
 from analysis.unified_trade_plan import build_unified_trade_plan
 from analysis.market_regime import detect_market_regime
 from analysis.session_filter import detect_session, validate_session
+from analysis.trade_journal import create_trade_record
 from config.timeframes import TRADING_MODES
 
 
@@ -130,6 +131,23 @@ def analyze_multi_timeframe(
         entry_quality=entry_quality,
     )
 
+    trade_record = None
+
+    if trade_plan.get("status") == "READY":
+        regime_name = None
+        if isinstance(market_regime, dict):
+            regime_name = market_regime.get("regime")
+
+        session_name = None
+        if isinstance(session, dict):
+            session_name = session.get("session")
+
+        trade_record = create_trade_record(
+            trade_plan=trade_plan,
+            market_regime=regime_name,
+            session=session_name,
+        )
+
     return {
         "timeframes": results,
         "confluence": final_confluence,
@@ -139,6 +157,7 @@ def analyze_multi_timeframe(
         "position_sizing": position_sizing,
         "risk_guard": risk_guard,
         "trade_plan": trade_plan,
+        "trade_record": trade_record,
         "market_regime": market_regime,
         "session": session,
         "session_filter": session_filter,
