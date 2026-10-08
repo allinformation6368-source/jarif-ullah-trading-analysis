@@ -1,9 +1,32 @@
-def calculate_mtf_confluence(results):
-    weights = {
+MODE_WEIGHTS = {
+    "scalping": {
+        "1min": 1,
+        "5min": 2,
+        "15min": 3,
+        "1h": 4,
+    },
+    "intraday": {
+        "5min": 1,
+        "15min": 2,
         "1h": 3,
-        "15m": 2,
-        "5m": 1,
-    }
+        "4h": 4,
+    },
+    "swing": {
+        "4h": 1,
+        "1day": 2,
+        "1week": 3,
+    },
+}
+
+DEFAULT_WEIGHTS = {
+    "1h": 3,
+    "15m": 2,
+    "5m": 1,
+}
+
+
+def calculate_mtf_confluence(results, mode=None):
+    weights = MODE_WEIGHTS.get(mode, DEFAULT_WEIGHTS)
 
     score = 0
     reasons = []
