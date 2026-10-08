@@ -7,6 +7,7 @@ from analysis.position_sizing import calculate_position_size
 from analysis.risk_guard import validate_trade_risk
 from analysis.unified_trade_plan import build_unified_trade_plan
 from analysis.market_regime import detect_market_regime
+from analysis.session_filter import detect_session, validate_session
 from config.timeframes import TRADING_MODES
 
 
@@ -32,6 +33,8 @@ def analyze_multi_timeframe(
 ):
     results = {}
     market_regime = None
+    session = None
+    session_filter = None
 
     for timeframe, candles in timeframes.items():
         results[timeframe] = analyze_timeframe(candles)
@@ -57,6 +60,8 @@ def analyze_multi_timeframe(
 
         if candles:
             market_regime = detect_market_regime(candles)
+            session = detect_session(candles)
+            session_filter = validate_session(session)
 
     decision = evaluate_trade_decision(
         final_confluence
@@ -120,4 +125,6 @@ def analyze_multi_timeframe(
         "risk_guard": risk_guard,
         "trade_plan": trade_plan,
         "market_regime": market_regime,
+        "session": session,
+        "session_filter": session_filter,
     }

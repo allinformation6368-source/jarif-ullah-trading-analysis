@@ -219,3 +219,48 @@ def test_mtf_empty_data_has_no_market_regime():
     )
 
     assert result["market_regime"] is None
+
+
+def test_mtf_has_session_filter():
+    candles = make_bullish_candles()
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": candles,
+            "15m": candles,
+            "1h": candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    session = result["session"]
+    session_filter = result["session_filter"]
+
+    assert session is not None
+    assert session["status"] == "VALID"
+    assert session["session"] in (
+        "ASIA",
+        "LONDON",
+        "NEW_YORK",
+        "OFF_SESSION",
+    )
+
+    assert session_filter is not None
+    assert session_filter["status"] in (
+        "APPROVED",
+        "BLOCKED",
+    )
+
+
+def test_mtf_empty_data_has_no_session():
+    result = analyze_multi_timeframe(
+        {
+            "5m": [],
+            "15m": [],
+            "1h": [],
+        }
+    )
+
+    assert result["session"] is None
+    assert result["session_filter"] is None
