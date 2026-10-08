@@ -195,3 +195,25 @@ def calculate_smc_risk_from_analysis(
     result["sl_source"] = sl_source
 
     return result
+
+
+def calculate_smc_risk_from_candles(
+    signal,
+    candles,
+    analysis,
+    risk_reward=2,
+):
+    if not candles:
+        return {
+            "status": "REJECTED",
+            "reason": "No candles available",
+        }
+
+    entry = candles[-1]["close"]
+
+    return calculate_smc_risk_from_analysis(
+        signal=signal,
+        entry=entry,
+        analysis=analysis,
+        risk_reward=risk_reward,
+    )
