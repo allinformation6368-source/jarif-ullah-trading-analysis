@@ -1,3 +1,5 @@
+from analysis.execution_audit import create_execution_audit
+
 from config.risk import (
     DEFAULT_EXECUTION_MODE,
     DEFAULT_ACCOUNT_BALANCE,
@@ -92,12 +94,29 @@ def execute_order(
 
     if execution_config["status"] != "VALID":
         if mode == "LIVE":
-            return execute_live_order(order)
-        return execution_config
+            result = execute_live_order(order)
+        else:
+            result = execution_config
 
-    return execute_paper_order(
+        result["audit"] = create_execution_audit(
+            result=result,
+            order=order,
+            mode=mode,
+        )
+
+        return result
+
+    result = execute_paper_order(
         order=order,
         account_balance=account_balance,
         risk_percent=risk_percent,
         risk_reward=risk_reward,
     )
+
+    result["audit"] = create_execution_audit(
+        result=result,
+        order=order,
+        mode=mode,
+    )
+
+    return result
