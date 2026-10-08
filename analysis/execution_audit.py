@@ -195,3 +195,46 @@ def query_execution_audits(
         records = records[-limit:]
 
     return records
+
+def summarize_execution_audits(
+    audit_file=DEFAULT_AUDIT_FILE,
+):
+    records = read_execution_audits(audit_file)
+
+    summary = {
+        "total": len(records),
+        "accepted": 0,
+        "rejected": 0,
+        "buy": 0,
+        "sell": 0,
+        "paper": 0,
+        "live": 0,
+        "rejection_reasons": {},
+    }
+
+    for record in records:
+        status = record.get("execution_status")
+        signal = record.get("signal")
+        mode = record.get("mode")
+
+        if status == "PAPER_ACCEPTED":
+            summary["accepted"] += 1
+        else:
+            summary["rejected"] += 1
+
+            reason = record.get("reason") or "Unknown"
+            summary["rejection_reasons"][reason] = (
+                summary["rejection_reasons"].get(reason, 0) + 1
+            )
+
+        if signal == "BUY":
+            summary["buy"] += 1
+        elif signal == "SELL":
+            summary["sell"] += 1
+
+        if mode == "PAPER":
+            summary["paper"] += 1
+        elif mode == "LIVE":
+            summary["live"] += 1
+
+    return summary
