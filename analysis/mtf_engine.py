@@ -4,6 +4,7 @@ from analysis.trade_decision import evaluate_trade_decision
 from analysis.entry_quality import evaluate_entry_quality
 from analysis.risk_management import calculate_smc_risk_from_candles
 from analysis.position_sizing import calculate_position_size
+from analysis.risk_guard import validate_trade_risk
 from config.timeframes import TRADING_MODES
 
 
@@ -48,6 +49,7 @@ def analyze_multi_timeframe(
 
     risk = None
     position_sizing = None
+    risk_guard = None
 
     if decision["decision"] == "ENTRY_READY":
         execution_timeframe = _get_execution_timeframe(
@@ -75,6 +77,11 @@ def analyze_multi_timeframe(
                     stop_loss=risk["stop_loss"],
                 )
 
+            risk_guard = validate_trade_risk(
+                risk=risk,
+                position_sizing=position_sizing,
+            )
+
     return {
         "timeframes": results,
         "confluence": final_confluence,
@@ -82,4 +89,5 @@ def analyze_multi_timeframe(
         "entry_quality": entry_quality,
         "risk": risk,
         "position_sizing": position_sizing,
+        "risk_guard": risk_guard,
     }

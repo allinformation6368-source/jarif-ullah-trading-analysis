@@ -98,3 +98,49 @@ if __name__ == "__main__":
     test_mtf_ready_calculates_position_size()
 
     print("MTF RISK + POSITION SIZING CONTRACT TEST: SUCCESS")
+
+
+def test_mtf_ready_risk_guard_is_approved():
+    candles = make_bullish_candles()
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": candles,
+            "15m": candles,
+            "1h": candles,
+        },
+        account_balance=10000,
+        risk_percent=1,
+    )
+
+    guard = result["risk_guard"]
+
+    assert guard is not None
+    assert guard["status"] == "APPROVED"
+    assert guard["signal"] == "LONG"
+    assert guard["entry"] == result["risk"]["entry"]
+    assert guard["stop_loss"] == result["risk"]["stop_loss"]
+
+
+def test_mtf_wait_has_no_risk_guard():
+    result = analyze_multi_timeframe(
+        {
+            "5m": [],
+            "15m": [],
+            "1h": [],
+        }
+    )
+
+    assert result["risk"] is None
+    assert result["position_sizing"] is None
+    assert result["risk_guard"] is None
+
+
+if __name__ == "__main__":
+    test_mtf_ready_calculates_real_risk()
+    test_mtf_wait_has_no_risk()
+    test_mtf_ready_calculates_position_size()
+    test_mtf_ready_risk_guard_is_approved()
+    test_mtf_wait_has_no_risk_guard()
+
+    print("MTF RISK + POSITION SIZING + RISK GUARD CONTRACT TEST: SUCCESS")
