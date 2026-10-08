@@ -2,6 +2,22 @@ from analysis.unified_engine import analyze_timeframe
 from analysis.mtf_confluence import calculate_mtf_confluence
 from analysis.trade_decision import evaluate_trade_decision
 from analysis.entry_quality import evaluate_entry_quality
+from analysis.risk_management import calculate_smc_risk_from_candles
+from config.timeframes import TRADING_MODES
+
+
+def _get_execution_timeframe(timeframes, mode=None):
+    if mode in TRADING_MODES:
+        primary = TRADING_MODES[mode]["primary"]
+
+        for timeframe in reversed(primary):
+            if timeframe in timeframes:
+                return timeframe
+
+    if timeframes:
+        return next(reversed(timeframes))
+
+    return None
 
 
 def analyze_multi_timeframe(timeframes, mode=None):
@@ -24,9 +40,26 @@ def analyze_multi_timeframe(timeframes, mode=None):
         decision,
     )
 
+    risk = None
+
+    if decision["decision"] == "ENTRY_READY":
+        execution_timeframe = _get_execution_timeframe(
+            timeframes,
+            mode=mode,
+        )
+
+        if execution_timeframe is not None:
+            risk = calculate_smc_risk_from_candles(
+                signal=decision["signal"],
+                candles=timeframes[execution_timeframe],
+                analysis=results[execution_timeframe],
+                risk_reward=2,
+            )
+
     return {
         "timeframes": results,
         "confluence": final_confluence,
         "decision": decision,
         "entry_quality": entry_quality,
+        "risk": risk,
     }

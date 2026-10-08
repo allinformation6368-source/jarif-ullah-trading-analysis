@@ -1,0 +1,67 @@
+from analysis.mtf_engine import analyze_multi_timeframe
+
+
+def make_bullish_candles():
+    return [
+        {"datetime": "2026-10-07T09:15:00", "open": 100, "high": 103, "low": 99, "close": 101},
+        {"datetime": "2026-10-07T09:20:00", "open": 101, "high": 105, "low": 99, "close": 103},
+        {"datetime": "2026-10-07T09:25:00", "open": 103, "high": 106, "low": 97, "close": 102},
+        {"datetime": "2026-10-07T09:30:00", "open": 102, "high": 104, "low": 99, "close": 100},
+        {"datetime": "2026-10-07T09:35:00", "open": 100, "high": 105, "low": 97, "close": 103},
+        {"datetime": "2026-10-07T09:40:00", "open": 103, "high": 108, "low": 101, "close": 106},
+        {"datetime": "2026-10-07T09:45:00", "open": 106, "high": 107, "low": 99, "close": 102},
+        {"datetime": "2026-10-07T09:50:00", "open": 102, "high": 110, "low": 95, "close": 109},
+        {"datetime": "2026-10-07T09:55:00", "open": 109, "high": 110, "low": 103, "close": 105},
+        {"datetime": "2026-10-07T10:00:00", "open": 105, "high": 107, "low": 104, "close": 106},
+        {"datetime": "2026-10-07T10:05:00", "open": 106, "high": 114, "low": 108, "close": 113},
+        {"datetime": "2026-10-07T10:10:00", "open": 113, "high": 116, "low": 110, "close": 115},
+        {"datetime": "2026-10-07T10:15:00", "open": 115, "high": 116, "low": 106, "close": 109},
+        {"datetime": "2026-10-07T10:20:00", "open": 109, "high": 112, "low": 98, "close": 100},
+    ]
+
+
+def test_mtf_ready_calculates_real_risk():
+    candles = make_bullish_candles()
+
+    result = analyze_multi_timeframe(
+        {
+            "5m": candles,
+            "15m": candles,
+            "1h": candles,
+        }
+    )
+
+    assert result["decision"]["decision"] == "ENTRY_READY"
+    assert result["decision"]["signal"] == "LONG"
+
+    risk = result["risk"]
+
+    assert risk is not None
+    assert risk["status"] == "VALID"
+    assert risk["entry"] == 100
+    assert risk["stop_loss"] < risk["entry"]
+    assert risk["take_profit"] > risk["entry"]
+    assert risk["risk"] > 0
+    assert risk["reward"] > risk["risk"]
+    assert risk["risk_reward"] == 2
+    assert risk["sl_source"] in ("STRUCTURE", "ORDER_BLOCK")
+
+
+def test_mtf_wait_has_no_risk():
+    result = analyze_multi_timeframe(
+        {
+            "5m": [],
+            "15m": [],
+            "1h": [],
+        }
+    )
+
+    assert result["decision"]["decision"] == "WAIT"
+    assert result["risk"] is None
+
+
+if __name__ == "__main__":
+    test_mtf_ready_calculates_real_risk()
+    test_mtf_wait_has_no_risk()
+
+    print("MTF RISK INTEGRATION CONTRACT TEST: SUCCESS")
