@@ -219,3 +219,143 @@ def test_no_trade_preserves_symbol_and_mode(monkeypatch):
     assert result["status"] == "NO_TRADE"
     assert result["symbol"] == "ETH/USD"
     assert result["mode"] == "intraday"
+
+
+def test_live_paper_session_rejects_invalid_session():
+    from analysis.live_paper import run_live_paper_session
+
+    result = run_live_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        session=None,
+    )
+
+    assert result["status"] == "REJECTED"
+
+
+def test_live_paper_session_rejects_closed_session(monkeypatch):
+    from analysis.live_paper import run_live_paper_session
+
+    session = {
+        "status": "CLOSED",
+        "orders": [],
+    }
+
+    result = run_live_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        session=session,
+    )
+
+    assert result["status"] == "REJECTED"
+
+
+def test_live_paper_session_adds_accepted_order(monkeypatch):
+    import analysis.live_paper as live_paper
+
+    session = {
+        "status": "READY",
+        "symbol": "BTC/USD",
+        "mode": "scalping",
+        "starting_balance": 10000.0,
+        "orders": [],
+    }
+
+    monkeypatch.setattr(
+        live_paper,
+        "run_live_paper_analysis",
+        lambda **kwargs: {
+            "status": "PAPER_ACCEPTED",
+            "analysis": {
+                "paper_order": {
+                    "status": "OPEN",
+                    "signal": "BUY",
+                    "entry": 100.0,
+                    "stop_loss": 95.0,
+                    "take_profit": 110.0,
+                    "pnl": 0,
+                }
+            },
+            "execution": {
+                "status": "PAPER_ACCEPTED",
+                "order": {
+                    "status": "OPEN",
+                    "signal": "BUY",
+                    "entry": 100.0,
+                    "stop_loss": 95.0,
+                    "take_profit": 110.0,
+                    "pnl": 0,
+                },
+            },
+        },
+    )
+
+    result = live_paper.run_live_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        session=session,
+    )
+
+    assert result["status"] == "PAPER_SESSION_ACCEPTED"
+    assert result["session"]["status"] == "ADDED"
+    assert len(session["orders"]) == 1
+    assert session["orders"][0]["signal"] == "BUY"
+
+
+def test_live_paper_session_does_not_add_rejected_execution(monkeypatch):
+    import analysis.live_paper as live_paper
+
+    session = {
+        "status": "READY",
+        "orders": [],
+    }
+
+    monkeypatch.setattr(
+        live_paper,
+        "run_live_paper_analysis",
+        lambda **kwargs: {
+            "status": "REJECTED",
+            "analysis": {},
+            "execution": {
+                "status": "REJECTED",
+                "reason": "Execution rejected",
+            },
+        },
+    )
+
+    result = live_paper.run_live_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        session=session,
+    )
+
+    assert result["status"] == "REJECTED"
+    assert len(session["orders"]) == 0
+
+
+def test_live_paper_session_handles_no_trade(monkeypatch):
+    import analysis.live_paper as live_paper
+
+    session = {
+        "status": "READY",
+        "orders": [],
+    }
+
+    monkeypatch.setattr(
+        live_paper,
+        "run_live_paper_analysis",
+        lambda **kwargs: {
+            "status": "NO_TRADE",
+            "analysis": {},
+            "execution": None,
+        },
+    )
+
+    result = live_paper.run_live_paper_session(
+        symbol="BTC/USD",
+        mode="scalping",
+        session=session,
+    )
+
+    assert result["status"] == "NO_TRADE"
+    assert len(session["orders"]) == 0
