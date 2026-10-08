@@ -1,4 +1,9 @@
 from datetime import datetime, timezone
+import json
+from pathlib import Path
+
+
+DEFAULT_AUDIT_FILE = Path("logs/execution_audit.jsonl")
 
 
 def create_execution_audit(
@@ -58,3 +63,45 @@ def is_execution_successful(audit):
     return audit.get("execution_status") in (
         "PAPER_ACCEPTED",
     )
+
+
+def persist_execution_audit(
+    audit,
+    audit_file=DEFAULT_AUDIT_FILE,
+):
+    if not isinstance(audit, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid audit record",
+        }
+
+    audit_file = Path(audit_file)
+    audit_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with audit_file.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(audit, separators=(",", ":")) + "\n")
+
+    return {
+        "status": "SAVED",
+        "path": str(audit_file),
+    }
+
+
+def read_execution_audits(
+    audit_file=DEFAULT_AUDIT_FILE,
+):
+    audit_file = Path(audit_file)
+
+    if not audit_file.exists():
+        return []
+
+    records = []
+
+    with audit_file.open("r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
+
+            if line:
+                records.append(json.loads(line))
+
+    return records

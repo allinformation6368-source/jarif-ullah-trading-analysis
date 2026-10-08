@@ -1,4 +1,7 @@
-from analysis.execution_audit import create_execution_audit
+from analysis.execution_audit import (
+    create_execution_audit,
+    persist_execution_audit,
+)
 
 from config.risk import (
     DEFAULT_EXECUTION_MODE,
@@ -103,6 +106,7 @@ def execute_order(
             order=order,
             mode=mode,
         )
+        persist_execution_audit(result["audit"])
 
         return result
 
@@ -118,5 +122,6 @@ def execute_order(
         order=order,
         mode=mode,
     )
+    persist_execution_audit(result["audit"])
 
     return result
