@@ -213,3 +213,55 @@ def test_backtest_with_real_mtf_engine():
     assert "trades" in result
     assert "statistics" in result
     assert result["statistics"]["total_trades"] >= 0
+
+
+def test_equity_and_risk_metrics():
+    trades = [
+        {"result": "WIN", "pnl": 100},
+        {"result": "LOSS", "pnl": -50},
+        {"result": "LOSS", "pnl": -75},
+        {"result": "WIN", "pnl": 200},
+    ]
+
+    result = calculate_backtest_statistics(
+        trades,
+        starting_balance=10000,
+    )
+
+    assert result["starting_balance"] == 10000
+    assert result["ending_balance"] == 10175
+    assert result["peak_equity"] == 10175
+    assert result["max_drawdown"] == 125
+    assert result["profit_factor"] == 300 / 125
+    assert result["equity_curve"] == [
+        10000,
+        10100,
+        10050,
+        9975,
+        10175,
+    ]
+
+
+def test_profit_factor_zero_when_no_trades():
+    result = calculate_backtest_statistics(
+        [],
+        starting_balance=5000,
+    )
+
+    assert result["starting_balance"] == 5000
+    assert result["ending_balance"] == 5000
+    assert result["peak_equity"] == 5000
+    assert result["max_drawdown"] == 0
+    assert result["profit_factor"] == 0
+    assert result["equity_curve"] == [5000]
+
+
+def test_profit_factor_infinite_for_only_wins():
+    trades = [
+        {"result": "WIN", "pnl": 100},
+        {"result": "WIN", "pnl": 50},
+    ]
+
+    result = calculate_backtest_statistics(trades)
+
+    assert result["profit_factor"] == float("inf")

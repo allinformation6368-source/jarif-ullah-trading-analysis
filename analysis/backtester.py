@@ -46,7 +46,10 @@ def _calculate_trade_result(
     }
 
 
-def calculate_backtest_statistics(trades):
+def calculate_backtest_statistics(
+    trades,
+    starting_balance=10000,
+):
     closed = [
         trade
         for trade in trades
@@ -76,6 +79,42 @@ def calculate_backtest_statistics(trades):
         else 0
     )
 
+    equity = starting_balance
+    peak_equity = starting_balance
+    max_drawdown = 0
+    equity_curve = [starting_balance]
+
+    for trade in closed:
+        equity += trade.get("pnl", 0)
+        equity_curve.append(equity)
+
+        if equity > peak_equity:
+            peak_equity = equity
+
+        drawdown = peak_equity - equity
+
+        if drawdown > max_drawdown:
+            max_drawdown = drawdown
+
+    gross_profit = sum(
+        trade.get("pnl", 0)
+        for trade in wins
+    )
+
+    gross_loss = abs(
+        sum(
+            trade.get("pnl", 0)
+            for trade in losses
+        )
+    )
+
+    if gross_loss > 0:
+        profit_factor = gross_profit / gross_loss
+    elif gross_profit > 0:
+        profit_factor = float("inf")
+    else:
+        profit_factor = 0
+
     return {
         "status": "VALID",
         "total_trades": len(trades),
@@ -84,6 +123,12 @@ def calculate_backtest_statistics(trades):
         "losses": len(losses),
         "win_rate": win_rate,
         "total_pnl": total_pnl,
+        "starting_balance": starting_balance,
+        "ending_balance": equity,
+        "peak_equity": peak_equity,
+        "max_drawdown": max_drawdown,
+        "profit_factor": profit_factor,
+        "equity_curve": equity_curve,
     }
 
 
@@ -98,14 +143,20 @@ def run_backtest(
         return {
             "status": "WAIT",
             "trades": [],
-            "statistics": calculate_backtest_statistics([]),
+            "statistics": calculate_backtest_statistics(
+                [],
+                starting_balance=account_balance,
+            ),
         }
 
     if len(candles) <= lookback:
         return {
             "status": "WAIT",
             "trades": [],
-            "statistics": calculate_backtest_statistics([]),
+            "statistics": calculate_backtest_statistics(
+                [],
+                starting_balance=account_balance,
+            ),
         }
 
     trades = []
@@ -164,5 +215,8 @@ def run_backtest(
     return {
         "status": "VALID",
         "trades": trades,
-        "statistics": calculate_backtest_statistics(trades),
+        "statistics": calculate_backtest_statistics(
+            trades,
+            starting_balance=account_balance,
+        ),
     }
