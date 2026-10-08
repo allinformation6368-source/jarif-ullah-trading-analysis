@@ -17,7 +17,6 @@ def valid_order():
 
 def test_validate_execution_order():
     result = validate_execution_order(valid_order())
-
     assert result["status"] == "VALID"
 
 
@@ -45,6 +44,39 @@ def test_execute_paper_order():
     assert result["status"] == "PAPER_ACCEPTED"
     assert result["mode"] == "PAPER"
     assert result["signal"] == "BUY"
+    assert result["risk_percent"] == 1.0
+
+
+def test_execute_paper_order_accepts_custom_risk():
+    result = execute_paper_order(
+        valid_order(),
+        account_balance=25000,
+        risk_percent=2,
+        risk_reward=3,
+    )
+
+    assert result["status"] == "PAPER_ACCEPTED"
+    assert result["account_balance"] == 25000
+    assert result["risk_percent"] == 2
+    assert result["risk_reward"] == 3
+
+
+def test_execute_paper_order_rejects_invalid_balance():
+    result = execute_paper_order(
+        valid_order(),
+        account_balance=0,
+    )
+
+    assert result["status"] == "REJECTED"
+
+
+def test_execute_paper_order_rejects_excessive_risk():
+    result = execute_paper_order(
+        valid_order(),
+        risk_percent=10,
+    )
+
+    assert result["status"] == "REJECTED"
 
 
 def test_execute_live_order_is_blocked():
@@ -70,7 +102,7 @@ def test_execute_order_live_is_blocked():
     assert result["status"] == "REJECTED"
 
 
-def test_execute_order_rejects_invalid_mode():
+def test_execute_order_invalid_mode():
     result = execute_order(
         valid_order(),
         mode="UNKNOWN",
@@ -79,10 +111,15 @@ def test_execute_order_rejects_invalid_mode():
     assert result["status"] == "REJECTED"
 
 
-def test_execute_order_rejects_invalid_order():
+def test_execute_order_applies_risk_config():
     result = execute_order(
-        {},
-        mode="PAPER",
+        valid_order(),
+        account_balance=50000,
+        risk_percent=1.5,
+        risk_reward=2.5,
     )
 
-    assert result["status"] == "REJECTED"
+    assert result["status"] == "PAPER_ACCEPTED"
+    assert result["account_balance"] == 50000
+    assert result["risk_percent"] == 1.5
+    assert result["risk_reward"] == 2.5
