@@ -212,3 +212,114 @@ def calculate_open_positions(orders):
         "open_positions": len(open_orders),
         "orders": open_orders,
     }
+
+
+def create_paper_account(starting_balance=10000):
+    if starting_balance <= 0:
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid starting balance",
+        }
+
+    return {
+        "status": "READY",
+        "starting_balance": starting_balance,
+        "balance": starting_balance,
+        "realized_pnl": 0,
+        "equity": starting_balance,
+        "orders": [],
+    }
+
+
+def add_paper_order(account, order):
+    if not isinstance(account, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid account",
+        }
+
+    if account.get("status") != "READY":
+        return {
+            "status": "REJECTED",
+            "reason": "Account is not ready",
+        }
+
+    if not isinstance(order, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid order",
+        }
+
+    if order.get("status") not in ("OPEN", "CLOSED"):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid order status",
+        }
+
+    account["orders"].append(dict(order))
+
+    if order.get("status") == "CLOSED":
+        account["realized_pnl"] += order.get("pnl", 0)
+
+    account["balance"] = (
+        account["starting_balance"]
+        + account["realized_pnl"]
+    )
+
+    account["equity"] = account["balance"]
+
+    return {
+        "status": "ADDED",
+        "balance": account["balance"],
+        "realized_pnl": account["realized_pnl"],
+        "equity": account["equity"],
+        "orders": len(account["orders"]),
+    }
+
+
+def update_paper_account(account, orders):
+    if not isinstance(account, dict):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid account",
+        }
+
+    if account.get("status") != "READY":
+        return {
+            "status": "REJECTED",
+            "reason": "Account is not ready",
+        }
+
+    if not isinstance(orders, list):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid orders",
+        }
+
+    realized_pnl = sum(
+        order.get("pnl", 0)
+        for order in orders
+        if isinstance(order, dict)
+        and order.get("status") == "CLOSED"
+    )
+
+    account["orders"] = [
+        dict(order)
+        for order in orders
+    ]
+
+    account["realized_pnl"] = realized_pnl
+    account["balance"] = (
+        account["starting_balance"]
+        + realized_pnl
+    )
+    account["equity"] = account["balance"]
+
+    return {
+        "status": "UPDATED",
+        "starting_balance": account["starting_balance"],
+        "balance": account["balance"],
+        "realized_pnl": account["realized_pnl"],
+        "equity": account["equity"],
+        "orders": len(account["orders"]),
+    }

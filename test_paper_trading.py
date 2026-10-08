@@ -4,6 +4,9 @@ from analysis.paper_trading import (
     calculate_paper_balance,
     process_paper_position,
     calculate_open_positions,
+    create_paper_account,
+    add_paper_order,
+    update_paper_account,
 )
 
 
@@ -197,3 +200,72 @@ def test_calculate_open_positions():
     assert result["status"] == "VALID"
     assert result["open_positions"] == 2
     assert len(result["orders"]) == 2
+
+
+def test_create_paper_account():
+    account = create_paper_account(10000)
+
+    assert account["status"] == "READY"
+    assert account["starting_balance"] == 10000
+    assert account["balance"] == 10000
+    assert account["realized_pnl"] == 0
+    assert account["equity"] == 10000
+    assert account["orders"] == []
+
+
+def test_add_closed_paper_order_updates_balance():
+    account = create_paper_account(10000)
+
+    order = {
+        "status": "CLOSED",
+        "result": "WIN",
+        "pnl": 100,
+    }
+
+    result = add_paper_order(account, order)
+
+    assert result["status"] == "ADDED"
+    assert result["realized_pnl"] == 100
+    assert result["balance"] == 10100
+    assert result["equity"] == 10100
+    assert result["orders"] == 1
+
+
+def test_add_open_paper_order_does_not_change_balance():
+    account = create_paper_account(10000)
+
+    order = {
+        "status": "OPEN",
+        "signal": "BUY",
+        "pnl": 0,
+    }
+
+    result = add_paper_order(account, order)
+
+    assert result["status"] == "ADDED"
+    assert result["realized_pnl"] == 0
+    assert result["balance"] == 10000
+    assert result["equity"] == 10000
+    assert result["orders"] == 1
+
+
+def test_update_paper_account_from_orders():
+    account = create_paper_account(10000)
+
+    orders = [
+        {"status": "CLOSED", "result": "WIN", "pnl": 100},
+        {"status": "CLOSED", "result": "LOSS", "pnl": -50},
+        {"status": "OPEN", "pnl": 0},
+    ]
+
+    result = update_paper_account(
+        account,
+        orders,
+    )
+
+    assert result["status"] == "UPDATED"
+    assert result["starting_balance"] == 10000
+    assert result["realized_pnl"] == 50
+    assert result["balance"] == 10050
+    assert result["equity"] == 10050
+    assert result["orders"] == 3
