@@ -66,8 +66,8 @@ def test_parse_orders_candles_chronologically():
         candle["datetime"]
         for candle in result["candles"]
     ] == [
-        "2026-01-01 01:00:00",
-        "2026-01-01 02:00:00",
+        "2026-01-01T01:00:00+00:00",
+        "2026-01-01T02:00:00+00:00",
     ]
 
 
@@ -160,3 +160,34 @@ def test_missing_api_key():
     assert result["reason"] == (
         "TwelveData API key is not configured"
     )
+
+
+def test_parse_normalizes_mixed_timezone_candles():
+    response = valid_response()
+    response["values"] = [
+        {
+            "datetime": "2026-01-01T06:30:00+05:30",
+            "open": "102",
+            "high": "110",
+            "low": "100",
+            "close": "108",
+        },
+        {
+            "datetime": "2026-01-01T00:00:00+00:00",
+            "open": "101",
+            "high": "105",
+            "low": "99",
+            "close": "102",
+        },
+    ]
+
+    result = parse_twelve_data_response(response)
+
+    assert result["status"] == "VALID"
+    assert [
+        candle["datetime"]
+        for candle in result["candles"]
+    ] == [
+        "2026-01-01T00:00:00+00:00",
+        "2026-01-01T01:00:00+00:00",
+    ]

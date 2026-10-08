@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 REQUIRED_CANDLE_FIELDS = (
@@ -65,9 +65,12 @@ def validate_candle(candle):
         }
 
     try:
-        datetime.fromisoformat(
+        timestamp = datetime.fromisoformat(
             str(candle["datetime"]).replace("Z", "+00:00")
         )
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+        timestamp = timestamp.astimezone(timezone.utc)
     except (TypeError, ValueError):
         return {
             "status": "REJECTED",
@@ -85,10 +88,17 @@ def normalize_candle(candle):
     if validation["status"] != "VALID":
         return validation
 
+    timestamp = datetime.fromisoformat(
+        str(candle["datetime"]).replace("Z", "+00:00")
+    )
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = timestamp.astimezone(timezone.utc)
+
     return {
         "status": "VALID",
         "candle": {
-            "datetime": str(candle["datetime"]),
+            "datetime": timestamp.isoformat(),
             "open": float(candle["open"]),
             "high": float(candle["high"]),
             "low": float(candle["low"]),
