@@ -40,6 +40,37 @@ def test_build_time_series_url():
     assert "outputsize=50" in url
 
 
+def test_parse_orders_candles_chronologically():
+    response = valid_response()
+    response["values"] = [
+        {
+            "datetime": "2026-01-01 02:00:00",
+            "open": "102",
+            "high": "110",
+            "low": "100",
+            "close": "108",
+        },
+        {
+            "datetime": "2026-01-01 01:00:00",
+            "open": "101",
+            "high": "105",
+            "low": "99",
+            "close": "102",
+        },
+    ]
+
+    result = parse_twelve_data_response(response)
+
+    assert result["status"] == "VALID"
+    assert [
+        candle["datetime"]
+        for candle in result["candles"]
+    ] == [
+        "2026-01-01 01:00:00",
+        "2026-01-01 02:00:00",
+    ]
+
+
 def test_parse_valid_response():
     result = parse_twelve_data_response(
         valid_response()

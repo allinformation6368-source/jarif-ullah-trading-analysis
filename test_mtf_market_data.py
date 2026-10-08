@@ -151,3 +151,59 @@ def test_fetch_mode_market_data_propagates_provider_failure(monkeypatch):
 
     assert result["status"] == "REJECTED"
     assert result["reason"] == "Rate limit"
+
+
+def test_fetch_mode_market_data_rejects_candle_gap(monkeypatch):
+    def fake_fetch(
+        symbol,
+        timeframes,
+        outputsize,
+        provider,
+    ):
+        return {
+            "status": "VALID",
+            "timeframes": {
+                timeframe: [
+                    {
+                        "datetime": "2026-01-01 00:00:00",
+                        "open": 100.0,
+                        "high": 110.0,
+                        "low": 95.0,
+                        "close": 105.0,
+                        "volume": None,
+                    },
+                    {
+                        "datetime": "2026-01-01 00:16:00",
+                        "open": 105.0,
+                        "high": 115.0,
+                        "low": 100.0,
+                        "close": 110.0,
+                        "volume": None,
+                    },
+                ]
+                for timeframe in timeframes
+            },
+        }
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.fetch_multi_timeframe_data",
+        fake_fetch,
+    )
+
+    monkeypatch.setattr(
+        "data.mtf_market_data.validate_latest_candle_freshness",
+        lambda candles, timeframe: {
+            "status": "VALID",
+            "age_seconds": 0,
+        },
+    )
+
+    result = fetch_mode_market_data(
+        symbol="BTC/USD",
+        mode="intraday",
+        outputsize=100,
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["timeframe"] == "5min"
+    assert "gap" in result["reason"].lower()

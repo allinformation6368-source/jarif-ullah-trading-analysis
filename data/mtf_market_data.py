@@ -1,6 +1,7 @@
 from config.timeframes import TRADING_MODES
 from data.market_data import fetch_multi_timeframe_data
 from data.candle_freshness import validate_latest_candle_freshness
+from data.candle_continuity import validate_candle_continuity
 
 
 def get_mode_timeframes(mode):
@@ -62,6 +63,18 @@ def fetch_mode_market_data(
             return {
                 "status": "REJECTED",
                 "reason": freshness["reason"],
+                "timeframe": timeframe,
+            }
+
+        continuity = validate_candle_continuity(
+            candles=candles,
+            timeframe=timeframe,
+        )
+
+        if continuity["status"] != "VALID":
+            return {
+                "status": "REJECTED",
+                "reason": continuity["reason"],
                 "timeframe": timeframe,
             }
 

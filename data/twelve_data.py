@@ -56,9 +56,24 @@ def parse_twelve_data_response(response):
     if result["status"] != "VALID":
         return result
 
+    try:
+        from datetime import datetime
+
+        candles = sorted(
+            result["candles"],
+            key=lambda candle: datetime.fromisoformat(
+                str(candle["datetime"]).replace("Z", "+00:00")
+            ),
+        )
+    except (TypeError, ValueError):
+        return {
+            "status": "REJECTED",
+            "reason": "Invalid candle datetime ordering",
+        }
+
     return {
         "status": "VALID",
-        "candles": result["candles"],
+        "candles": candles,
         "meta": response.get("meta", {}),
     }
 
