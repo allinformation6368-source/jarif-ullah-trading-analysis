@@ -141,3 +141,44 @@ def test_validate_non_dict():
 
     assert result["status"] == "REJECTED"
     assert result["reason"] == "Invalid candle"
+
+
+def test_normalize_candles_rejects_empty_list():
+    result = normalize_candles([])
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Candles cannot be empty"
+
+
+def test_normalize_candles_rejects_duplicate_datetime():
+    candle = valid_candle()
+
+    result = normalize_candles(
+        [
+            candle,
+            {
+                **candle,
+                "open": 101,
+                "high": 111,
+                "low": 96,
+                "close": 106,
+            },
+        ]
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "Duplicate candle datetime"
+
+
+def test_normalize_candles_preserves_provider_order():
+    first = valid_candle()
+    second = {
+        **valid_candle(),
+        "datetime": "2026-01-01T00:01:00+00:00",
+    }
+
+    result = normalize_candles([second, first])
+
+    assert result["status"] == "VALID"
+    assert result["candles"][0]["datetime"] == second["datetime"]
+    assert result["candles"][1]["datetime"] == first["datetime"]

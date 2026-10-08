@@ -109,7 +109,14 @@ def normalize_candles(candles):
             "reason": "Candles must be a list",
         }
 
+    if not candles:
+        return {
+            "status": "REJECTED",
+            "reason": "Candles cannot be empty",
+        }
+
     normalized = []
+    seen_datetimes = set()
 
     for candle in candles:
         result = normalize_candle(candle)
@@ -117,7 +124,17 @@ def normalize_candles(candles):
         if result["status"] != "VALID":
             return result
 
-        normalized.append(result["candle"])
+        normalized_candle = result["candle"]
+        candle_datetime = normalized_candle["datetime"]
+
+        if candle_datetime in seen_datetimes:
+            return {
+                "status": "REJECTED",
+                "reason": "Duplicate candle datetime",
+            }
+
+        seen_datetimes.add(candle_datetime)
+        normalized.append(normalized_candle)
 
     return {
         "status": "VALID",
