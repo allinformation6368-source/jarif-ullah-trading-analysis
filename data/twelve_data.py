@@ -71,10 +71,25 @@ def parse_twelve_data_response(response):
             "reason": "Invalid candle datetime ordering",
         }
 
+    provider_headers = response.get(
+        "_provider_headers",
+        {},
+    )
+
+    credit_headers = {
+        key: value
+        for key, value in provider_headers.items()
+        if "credit" in key
+        or "quota" in key
+        or "rate" in key
+    }
+
     return {
         "status": "VALID",
         "candles": candles,
         "meta": response.get("meta", {}),
+        "provider_headers": provider_headers,
+        "credit_headers": credit_headers,
     }
 
 
@@ -131,6 +146,13 @@ def fetch_twelve_data_candles(
             payload = json.loads(
                 response.read().decode("utf-8")
             )
+
+            headers = {
+                str(key).lower(): str(value)
+                for key, value in getattr(response, "headers", {}).items()
+            }
+
+            payload["_provider_headers"] = headers
     except HTTPError as error:
         return {
             "status": "REJECTED",

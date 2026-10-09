@@ -4,3 +4,11 @@ __pycache__/
 *.pyc
 *.db
 logs/execution_audit.jsonl
+
+# Local scanner runtime state
+.runtime/
+
+# Temporary backups and working files
+*.step*_backup
+*.bak
+*.tmp

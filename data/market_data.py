@@ -29,6 +29,8 @@ def fetch_market_data(
         "timeframe": timeframe,
         "candles": result["candles"],
         "meta": result.get("meta", {}),
+        "provider_headers": result.get("provider_headers", {}),
+        "credit_headers": result.get("credit_headers", {}),
     }
 
 
